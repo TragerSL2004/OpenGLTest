@@ -5,6 +5,25 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+void GLDebugCallback(
+    unsigned int source,
+    unsigned int type,
+    unsigned int id,
+    unsigned int severity,
+    int length,
+    const char* message,
+    const void* userParam)
+{
+    std::cout << "[OpenGL]" << message << "\n";
+    if (severity == GL_DEBUG_SEVERITY_HIGH)
+        __debugbreak();
+}
+
+void GLFWErrorCallBack(int error, const char* description)
+{
+    std::cerr << description << "\n";
+}
+
 struct ShaderProgramSource
 {
     std::string VertexSource;
@@ -90,6 +109,10 @@ int main(void)
     if (!glfwInit())
         return -1;
 
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(640, 480, "OpenGL", NULL, NULL);
     if (!window)
@@ -98,12 +121,19 @@ int main(void)
         return -1;
     }
 
-
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
 
+    glfwSwapInterval(1);
+
     if (glewInit() != GLEW_OK)
         std::cout << "Error" << '\n';
+
+    /* GLFW error callback */
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+    glEnable(GL_DEBUG_OUTPUT);
+    glfwSetErrorCallback(GLFWErrorCallBack);
+    glDebugMessageCallback(GLDebugCallback, nullptr);
 
     std::cout << glGetString(GL_VERSION) << '\n';
 
@@ -119,14 +149,21 @@ int main(void)
         2, 3, 0
     };
 
+    unsigned int vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    // Vertex buffer
     unsigned int buffer;
     glGenBuffers(1, &buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, 6 * 2 * sizeof(float), positions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(float), positions, GL_STATIC_DRAW);
 
+    // Vertex attributes
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
 
+    // Index buffer
     unsigned int ibo;
     glGenBuffers(1, &ibo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
@@ -136,13 +173,38 @@ int main(void)
     unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
     glUseProgram(shader);
 
+    int location = glGetUniformLocation(shader, "u_Color");
+    _ASSERT(location != -1);
+    glUniform4f(location, 0.2f, 0.3f, 0.8f, 1.0f);
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    float r = 0.0f;
+    float increment = 0.05f;
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
+        glUseProgram(shader);
+        glUniform4f(location, r, 0.3f, 0.8f, 1.0f);
+
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+
+        if (r > 1.0f)
+            increment = -0.05f;
+        else if (r < 0.0f)
+            increment = 0.05f;
+
+        r += increment;
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
