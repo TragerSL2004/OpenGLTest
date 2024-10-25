@@ -134,10 +134,6 @@ int main(void)
             2, 3, 0
         };
 
-        unsigned int vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
         // Vertex buffer
         VertexBuffer vb(positions, 4 * 2 * sizeof(float));
         
