@@ -77,11 +77,12 @@ int main(void)
 
         // Index buffer
         IndexBuffer ib(indices, 4 * 2 * sizeof(float));
+
         Shader shader("res/shaders/Basic.shader");
         shader.Bind();
         shader.SetUniform4f("u_Color", 0.8f, 0.3f, 0.8f, 1.0f);
 
-        Texture texture("res/Images/Jazz.jpg");
+        Texture texture("res/Images/SonicTexture.jpg");
         texture.Bind();
         shader.SetUniform1i("u_Texture", 0);
 
